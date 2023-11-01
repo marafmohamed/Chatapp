@@ -29,7 +29,7 @@ const CreateChat = async (req, res) => {
       name: "sender",
       users: [req.user._id, userId],
       isGroupChat: false,
-      lastMessage:null
+      lastMessage: null,
     };
     try {
       const createcht = await Chat.create(newChat);
@@ -47,7 +47,10 @@ const CreateChat = async (req, res) => {
 const GetChats = async (req, res) => {
   try {
     var Chats = await Chat.find({
-      users: { $elemMatch: { $eq: req.user._id } },
+      $or: [
+        { users: { $elemMatch: { $eq: req.user._id } } },
+        { GroupAdmin: req.user._id },
+      ],
     })
       .populate("users", "-Password")
       .populate("lastMessage")
@@ -70,7 +73,7 @@ const CreateGroup = async (req, res) => {
     name: chatname,
     isGroupChat: true,
     GroupAdmin: req.user._id,
-    lastMessage:null
+    lastMessage: null,
   };
   try {
     const group = await Chat.create(groupchat);
@@ -106,23 +109,30 @@ const renameGroup = async (req, res) => {
 };
 const AddUser = async (req, res) => {
   const { userId, groupId } = req.body;
-  if (!userId || userId === req.user._id) {
+  if (!userId) {
     return res.status(400).json({ error: "invalid User Id" });
   }
   if (!groupId) {
     return res.status(400).json({ error: "invalid group Id" });
   }
   try {
-    var group = await Chat.findOne({
+    const group = await Chat.findOne({
       _id: groupId,
       isGroupChat: true,
     });
     if (!group) {
       throw new Error("group chat doesn't exist");
     }
+    if (
+      !group.users.includes(req.user._id) &&
+      group.GroupAdmin.toString() !== req.user._id.toString()
+    ) {
+      throw new Error("user not part of the group chat");
+    }
     if (group.users.includes(userId)) {
       throw new Error("user already in the group chat");
     }
+
     const users = [...group.users, userId];
     const pgroup = await Chat.findOneAndUpdate(
       { _id: group._id },
@@ -149,6 +159,9 @@ const deleteUser = async (req, res) => {
     if (!group) {
       throw new Error("group chat doesn't exist");
     }
+    if (group.GroupAdmin.toString() !== req.user._id.toString()) {
+      throw new Error("Only group admin can delete users from the group");
+    }
     const users = group.users.filter((element) => {
       return element != userId;
     });
@@ -156,7 +169,9 @@ const deleteUser = async (req, res) => {
       { _id: group._id },
       { users: users }
     );
-    pgroup=await Chat.findOne({_id:pgroup._id}).populate("users", "-Password").populate("GroupAdmin","-Password");
+    pgroup = await Chat.findOne({ _id: pgroup._id })
+      .populate("users", "-Password")
+      .populate("GroupAdmin", "-Password");
     res.status(200).json(pgroup);
   } catch (err) {
     res.status(400).json({ error: err.message });

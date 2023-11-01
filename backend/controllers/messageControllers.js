@@ -24,7 +24,7 @@ const sendMessage = async (req, res) => {
       { _id: message.chat },
       { lastMessage: message }
     );
-    chat=await Chat.findOne({_id:chat._id}).populate("lastMessage");
+    chat = await Chat.findOne({ _id: chat._id }).populate("lastMessage");
     res.status(200).json({ chat, message });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -32,16 +32,23 @@ const sendMessage = async (req, res) => {
 };
 const getMessages = async (req, res) => {
   const { chatId } = req.params;
-  console.log(chatId);
   if (!chatId) {
     return res.status(400).json({ error: "invalid chat id" });
   }
   try {
+    const chat = await Chat.findOne({ _id: chatId });
+    if (
+      !chat.users.includes(req.user._id) &&
+      chat.GroupAdmin.toString() !== req.user._id.toString()
+    ) {
+      return res.status(400).json({ error: "user not part of the chat" });
+    }
     const messages = await Message.find({
       chat: chatId,
     })
       .populate("sender", "-Password")
-      .populate("chat").sort({updatedAt:1});
+      .populate("chat")
+      .sort({ updatedAt: 1 });
     res.status(200).json(messages);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -49,5 +56,5 @@ const getMessages = async (req, res) => {
 };
 module.exports = {
   sendMessage,
-  getMessages
+  getMessages,
 };
