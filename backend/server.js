@@ -6,6 +6,8 @@ const messagesRoutes = require("./routes/messagesRoute");
 const chatRouter = require("./routes/chatRouter");
 const { requireAuth } = require("./requireAuth/requireAuth");
 const app = express();
+const cors =require('cors');
+app.use(cors());
 app.use(express.json());
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRouter);

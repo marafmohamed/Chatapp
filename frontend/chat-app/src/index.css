@@ -1,0 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Oswald&family=Quicksand:wght@700&family=Roboto&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Oswald&family=Roboto&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald&family=Roboto&family=Source+Sans+3:wght@600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
