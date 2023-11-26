@@ -6,12 +6,12 @@ const messagesRoutes = require("./routes/messagesRoute");
 const chatRouter = require("./routes/chatRouter");
 const { requireAuth } = require("./requireAuth/requireAuth");
 const app = express();
-const cors =require('cors');
+const cors = require("cors");
 app.use(cors());
 app.use(express.json());
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRouter);
-app.use("/api/message",messagesRoutes);
+app.use("/api/message", messagesRoutes);
 mongoose
   .connect(process.env.URI)
   .then(() => {

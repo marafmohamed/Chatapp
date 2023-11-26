@@ -44,8 +44,13 @@ const Searchuser = async (req, res) => {
   }
 };
 
+const UserInfo=(req,res)=>{
+  res.status(200).json(req.user)
+}
+
 module.exports = {
   loginUser,
   signupUser,
   Searchuser,
+  UserInfo
 };
