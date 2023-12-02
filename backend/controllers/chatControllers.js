@@ -22,11 +22,12 @@ const CreateChat = async (req, res) => {
     path: "lastMessage.sender",
     select: "Name Email Pic",
   });
+  const user = await User.findOne({ _id: userId }).select("-Password");
   if (isChatexist.length > 0) {
     return res.status(200).json(isChatexist[0]);
   } else {
     var newChat = {
-      name: "sender",
+      name: user.Name,
       users: [req.user._id, userId],
       isGroupChat: false,
       lastMessage: null,

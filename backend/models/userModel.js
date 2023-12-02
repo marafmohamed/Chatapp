@@ -35,8 +35,12 @@ UserModel.statics.signup = async function (Name, Email, Password) {
     throw new Error("Password not Strong enough");
   }
   const exists = await this.findOne({ Email });
+  const nameExists = await this.findOne({ Name });
   if (exists) {
     throw new Error("Email already in use");
+  }
+  if (nameExists) {
+    throw new Error("Name already in use");
   }
 
   //hashing the password and creating a document in the db

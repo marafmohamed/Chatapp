@@ -19,7 +19,7 @@ const sendMessage = async (req, res) => {
     message = await Message.findOne({ _id: message._id }).populate(
       "sender",
       "-Password"
-    );
+    ).populate("chat");
     var chat = await Chat.findOneAndUpdate(
       { _id: message.chat },
       { lastMessage: message }

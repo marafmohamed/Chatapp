@@ -35,22 +35,24 @@ const Searchuser = async (req, res) => {
       }
     : {};
   try {
-    const result = await User.find(keyword).find({
-      _id: { $ne: req.user._id },
-    });
-    res.send(result);
+    const result = await User.find(keyword)
+      .find({
+        _id: { $ne: req.user._id },
+      })
+      .select("-Password");
+    res.status(200).send(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
 
-const UserInfo=(req,res)=>{
-  res.status(200).json(req.user)
-}
+const UserInfo = (req, res) => {
+  res.status(200).json(req.user);
+};
 
 module.exports = {
   loginUser,
   signupUser,
   Searchuser,
-  UserInfo
+  UserInfo,
 };
