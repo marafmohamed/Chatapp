@@ -1,18 +1,18 @@
-import React, { useEffect, useState ,useRef} from "react";
+import React, { useEffect, useState, useRef } from "react";
 import useSearchUsers from "../hooks/useSearchUsers";
 import useAuth from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-export default function SlideBar({socket}) {
+export default function SlideBar({ socket }) {
   const { chats, setChats, loadingChats } = useAuth();
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
   const [searching, setSearching] = useState(false);
   const { SearchUsers } = useSearchUsers();
-  const SU=useRef(null);
+  const SU = useRef(null);
   const navigate = useNavigate();
   const handleEnterChat = (e) => {
     navigate(`/${e._id}`);
-    socket.emit("join Chat",e._id);
+    socket.emit("join Chat", e._id);
   };
   const handleAdd = async (user) => {
     const obj = JSON.parse(localStorage.getItem("user"));
@@ -41,6 +41,8 @@ export default function SlideBar({socket}) {
         }).then((res) => {
           res.json().then((cha) => {
             setChats(cha);
+            setSearch("");
+            setSearching(false);
           });
         });
       });
@@ -125,6 +127,18 @@ export default function SlideBar({socket}) {
          max-h-[400px] overflow-y-scroll rounded-xl mt-4 w-[95%] flex flex-col gap-2  items-center py-3 shadow-md z-20 "
         >
           {users.map((user, index) => {
+            let exist = false;
+            let c;
+            chats.forEach((chat) => {
+              if (chat) {
+                chat.users.forEach( (usr) => {
+                  if (usr._id === user._id) {
+                    exist = true;
+                    c=chat;
+                  }
+                });
+              }
+            });
             return (
               <li
                 key={index}
@@ -140,7 +154,7 @@ export default function SlideBar({socket}) {
                     {user.Name}
                   </h1>
                 </div>
-                <button
+              {!exist &&  <button
                   className="btn btn-sm btn-outline"
                   onClick={() => {
                     handleAdd(user);
@@ -148,6 +162,15 @@ export default function SlideBar({socket}) {
                 >
                   Add
                 </button>
+                }
+                {exist && <button
+                  className="btn btn-sm btn-outline"
+                  onClick={() => {
+                    navigate(`/${c._id}`)
+                  }}
+                >
+                  Chat
+                </button>}
               </li>
             );
           })}
@@ -175,19 +198,22 @@ export default function SlideBar({socket}) {
                       <img src="https://daisyui.com/images/stock/photo-1534528741775-53994a69daeb.jpg" />
                     </div>
                   </div>
-                 
-                  {chat.lastMessage && 
-                  <div>
-                    <h1 className=" font-Parr text-xl text-white/80">
-                    {chat.name}
-                  </h1>
-                    <p className="font-thin max-w-[120px] whitespace-nowrap text-gray-400 text-base  overflow-x-auto text-ellipsis overflow-hidden ">{chat.lastMessage.content}</p>
+
+                  {chat.lastMessage && (
+                    <div>
+                      <h1 className=" font-Parr text-xl text-white/80">
+                        {chat.name}
+                      </h1>
+                      <p className="font-thin max-w-[120px] whitespace-nowrap text-gray-400 text-base  overflow-x-auto text-ellipsis overflow-hidden ">
+                        {chat.lastMessage.content}
+                      </p>
                     </div>
-                  }
-                  {!chat.lastMessage &&   <h1 className=" font-Parr text-xl text-white/80">
-                    {chat.name}
-                  </h1>}
-                  
+                  )}
+                  {!chat.lastMessage && (
+                    <h1 className=" font-Parr text-xl text-white/80">
+                      {chat.name}
+                    </h1>
+                  )}
                 </div>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -219,7 +245,12 @@ export default function SlideBar({socket}) {
         </div>
       )}
       {searching && (
-        <div className="h-screen w-full backdrop-blur-sm fixed top-0 bg-black/50 "></div>
+        <div
+          className="h-screen w-full backdrop-blur-sm fixed top-0 bg-black/50 "
+          onClick={() => {
+            setSearching(false);
+          }}
+        ></div>
       )}
     </div>
   );
