@@ -2,12 +2,14 @@ import React, { useEffect, useState, useRef } from "react";
 import useSearchUsers from "../hooks/useSearchUsers";
 import useAuth from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-export default function SlideBar({ socket }) {
+export default function SlideBar({ socket ,userInfo}) {
+  console.log(userInfo);
   const { chats, setChats, loadingChats } = useAuth();
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
   const [searching, setSearching] = useState(false);
   const { SearchUsers } = useSearchUsers();
+  const [AddLoad, setAddLoad] = useState(false);
   const SU = useRef(null);
   const navigate = useNavigate();
   const handleEnterChat = (e) => {
@@ -15,6 +17,7 @@ export default function SlideBar({ socket }) {
     socket.emit("join Chat", e._id);
   };
   const handleAdd = async (user) => {
+    setAddLoad(true);
     const obj = JSON.parse(localStorage.getItem("user"));
     let token = null;
     if (obj) {
@@ -43,11 +46,13 @@ export default function SlideBar({ socket }) {
             setChats(cha);
             setSearch("");
             setSearching(false);
+            setAddLoad(false);
           });
         });
       });
     } else {
       console.log("error");
+      setAddLoad(false);
     }
   };
   useEffect(() => {
@@ -75,14 +80,14 @@ export default function SlideBar({ socket }) {
     };
   }, []);
   return (
-    <div className="w-full h-full rounded-t-2xl bg-gray-800 flex flex-col items-center ">
+    <div className="w-full h-full lg:w-[25%] rounded-t-2xl bg-gray-800 flex flex-col items-center ">
       <form
-        className="w-[95%]   sticky top-3 z-10 shadow-lg "
+        className="w-[95%] lg:w-full   sticky top-3 z-10 shadow-lg "
         onSubmit={(e) => {
           e.preventDefault();
         }}
       >
-        <div className="relative">
+        <div className="relative lg:mr-5">
           <input
             type="text"
             placeholder="Search Users"
@@ -122,19 +127,16 @@ export default function SlideBar({ socket }) {
         </div>
       </form>
       {users && searching && (
-        <ul
-          className="bg-gray-700 backdrop-blur-0
-         max-h-[400px] overflow-y-scroll rounded-xl mt-4 w-[95%] flex flex-col gap-2  items-center py-3 shadow-md z-20 "
-        >
+        <ul className="bg-gray-700 backdrop-blur-0  max-h-[400px] overflow-y-scroll rounded-xl mt-4 w-[95%]  lg:w-[300px] flex flex-col gap-2  items-center py-3 shadow-md z-20 ">
           {users.map((user, index) => {
             let exist = false;
             let c;
             chats.forEach((chat) => {
               if (chat) {
-                chat.users.forEach( (usr) => {
+                chat.users.forEach((usr) => {
                   if (usr._id === user._id) {
                     exist = true;
-                    c=chat;
+                    c = chat;
                   }
                 });
               }
@@ -154,23 +156,40 @@ export default function SlideBar({ socket }) {
                     {user.Name}
                   </h1>
                 </div>
-              {!exist &&  <button
-                  className="btn btn-sm btn-outline"
-                  onClick={() => {
-                    handleAdd(user);
-                  }}
-                >
-                  Add
-                </button>
-                }
-                {exist && <button
-                  className="btn btn-sm btn-outline"
-                  onClick={() => {
-                    navigate(`/${c._id}`)
-                  }}
-                >
-                  Chat
-                </button>}
+                {!exist && (
+                  <div>
+                    {!AddLoad && (
+                      <button
+                        className="btn btn-sm btn-outline"
+                        onClick={(e) => {
+                          handleAdd(user);
+                        }}
+                      >
+                        <p>Add</p>
+                      </button>
+                    )}
+                    {AddLoad && (
+                      <button
+                        className="btn btn-sm  bg-gray-500"
+                        onClick={(e) => {
+                          handleAdd(user);
+                        }}
+                      >
+                        <p>Add</p>
+                      </button>
+                    )}
+                  </div>
+                )}
+                {exist && (
+                  <button
+                    className="btn btn-sm btn-outline"
+                    onClick={() => {
+                      navigate(`/${c._id}`);
+                    }}
+                  >
+                    Chat
+                  </button>
+                )}
               </li>
             );
           })}
@@ -182,8 +201,15 @@ export default function SlideBar({ socket }) {
         </ul>
       )}
       {chats.length !== 0 && (
-        <div className=" flex shadow-inner flex-col absolute pb-2 top-16 w-[98%]  bg-gray-700 h-[90%] rounded-xl  p-0 items-center  overflow-scroll ">
+        <div className=" flex shadow-inner flex-col absolute lg:left-1 lg:w-[25%] overflow-x-hidden pb-2 top-16 w-[98%]  bg-gray-700 h-[90%] rounded-xl  p-0 items-center  overflow-scroll ">
           {chats.map((chat, index) => {
+            let ChatName;
+            if (chat.name === "sender") {
+              ChatName = chat.users.find((u) => u._id !== userInfo._id).Name;
+              console.log(ChatName);
+            } else {
+              ChatName = chat.name;
+            }
             return (
               <div
                 key={index}
@@ -202,16 +228,16 @@ export default function SlideBar({ socket }) {
                   {chat.lastMessage && (
                     <div>
                       <h1 className=" font-Parr text-xl text-white/80">
-                        {chat.name}
+                        {ChatName}
                       </h1>
-                      <p className="font-thin max-w-[120px] whitespace-nowrap text-gray-400 text-base  overflow-x-auto text-ellipsis overflow-hidden ">
+                      <p className="font-thin max-w-[120px] whitespace-nowrap text-gray-400 text-base  text-ellipsis overflow-hidden ">
                         {chat.lastMessage.content}
                       </p>
                     </div>
                   )}
                   {!chat.lastMessage && (
                     <h1 className=" font-Parr text-xl text-white/80">
-                      {chat.name}
+                      {ChatName}
                     </h1>
                   )}
                 </div>
@@ -240,13 +266,13 @@ export default function SlideBar({ socket }) {
         </div>
       )}
       {!loadingChats && chats.length === 0 && (
-        <div className="font-Parr -z-0 text-white/30  absolute shadow-inner text-2xl  top-80 bg-gray-700/50 w-[90%] h-20 flex justify-center items-center rounded-lg">
+        <div className="font-Parr -z-0 text-white/30 lg:w-[25%] absolute shadow-inner text-2xl  top-80 bg-gray-700/50 w-[90%] h-20 flex justify-center items-center rounded-lg">
           No Chats
         </div>
       )}
       {searching && (
         <div
-          className="h-screen w-full backdrop-blur-sm fixed top-0 bg-black/50 "
+          className="h-screen w-full backdrop-blur-sm fixed top-0 left-0 bg-black/50 "
           onClick={() => {
             setSearching(false);
           }}

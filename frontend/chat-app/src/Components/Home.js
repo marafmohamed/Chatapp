@@ -83,7 +83,7 @@ export default function Home() {
               </button>
             </div>
           
-          <Chats socket={socket}></Chats>
+          <Chats socket={socket} userInfo={userInfo}></Chats>
         </>
       )}
     </div>

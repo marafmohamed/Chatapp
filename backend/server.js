@@ -43,7 +43,9 @@ mongoose
         var chat =newMessageReceived.chat;
         console.log(chat);
         if(!chat.users) return console.log("chat.users not defined");
-
+        if(chat.isGroupChat){
+          socket.in(chat.GroupAdmin).emit("received",newMessageReceived);
+        }
         chat.users.forEach(user => {
           if(user === newMessageReceived.sender._id) return;
           console.log("emitting to user",user);

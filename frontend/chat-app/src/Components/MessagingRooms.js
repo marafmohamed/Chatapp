@@ -8,6 +8,7 @@ import Notification from "../SmallComponents/Notification";
 import io from "socket.io-client";
 export default function MessagingRooms() {
   const chatId = useParams();
+  const [loading, setLoading] = useState(false);
   const {
     chats,
     user,
@@ -19,11 +20,13 @@ export default function MessagingRooms() {
     setMessages,
     messages,
   } = useAuth();
+
   const [received, setReceived] = useState(false);
   const scrolll = useRef(null);
   const messg = useRef(null);
   const [realChat, setChat] = useState(null);
   const navigate = useNavigate();
+  const [ChatName, setChatName] = useState("");
   const handleClick = () => {
     console.log("clicked");
   };
@@ -63,9 +66,9 @@ export default function MessagingRooms() {
   // });
 
   useEffect(() => {
-    console.log("i am here");
+    setLoading(true);
+    setMessages([]);
     setChat(chats.find((chat) => chatId.id == chat._id));
-    console.log("this is Chatid", chatId);
     const getMessages = async () => {
       const obj = JSON.parse(localStorage.getItem("user"));
       let token = null;
@@ -84,24 +87,34 @@ export default function MessagingRooms() {
       );
       results.json().then((res) => {
         setMessages(res);
+        setLoading(false);
       });
     };
 
     return () => {
       getMessages();
+      setLoading(false);
     };
-    }, []);
-    useEffect(() => {
-      if (scrolll.current !== null) {
-        scrolll.current.scrollIntoView({ behavior: "auto" });
-      }
-    }, [messages]);
+  }, []);
   useEffect(() => {
-      socket.on("received", (newMessageReceived) => {
-
-        setMessages([...messages, newMessageReceived]);
-      });
+    if (realChat) {
+      if(realChat.isGroupChat){
+        setChatName(realChat.name);
+      }else{
+        setChatName(realChat.users.find((u) => u.Email !== user.Email).Name);
+      }    }
+  }, [realChat]);
+  useEffect(() => {
+    if (scrolll.current !== null) {
+      scrolll.current.scrollIntoView({ behavior: "auto" });
+    }
+  }, [messages]);
+  useEffect(() => {
+    socket.on("received", (newMessageReceived) => {
+      setMessages([...messages, newMessageReceived]);
+    });
   });
+
   return (
     <>
       {realChat && (
@@ -136,9 +149,7 @@ export default function MessagingRooms() {
                     />
                   </div>
                 </div>
-                <h1 className="text-2xl font-Parr text-white/80">
-                  {realChat.name}
-                </h1>
+                <h1 className="text-2xl font-Parr text-white/80">{ChatName}</h1>
               </div>
             </div>
 
@@ -166,8 +177,10 @@ export default function MessagingRooms() {
             <div className="bg-blue-400 hidden"></div>
             <div className="messages w-full">
               <div className="bg-gray-600 h-[92%]   max-h-[45rem] px-2 w-full flex flex-col  overflow-y-scroll ">
-                <ul>
-                  {messages &&
+               {loading && <div className="w-full h-full rounded-md flex justify-center items-center font-Parr text-lg bg-gray-600">getting messages</div>}
+               {!loading && messages.length===0 && <div className="w-full h-full rounded-md flex justify-center items-center font-Parr text-lg bg-gray-600">No messages</div>}
+               {!loading && <ul>
+                  {messages.length!==0 &&
                     messages.map((message, index) => {
                       const sender = message.sender.Email === user.Email;
                       let sameSender = false;
@@ -185,7 +198,7 @@ export default function MessagingRooms() {
                         </li>
                       );
                     })}
-                </ul>
+                </ul>}
               </div>
               <div className="bg-gray-700 shadow-lg flex h-[8%] w-full  items-center justify-center ">
                 <form

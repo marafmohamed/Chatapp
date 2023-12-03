@@ -27,7 +27,7 @@ const CreateChat = async (req, res) => {
     return res.status(200).json(isChatexist[0]);
   } else {
     var newChat = {
-      name: user.Name,
+      name: "sender",
       users: [req.user._id, userId],
       isGroupChat: false,
       lastMessage: null,
@@ -105,7 +105,7 @@ const renameGroup = async (req, res) => {
       .populate("GroupAdmin");
     res.status(200).json(populatedUpdatedChat);
   } catch (err) {
-    res.status(200).json({ error: err.message });
+    res.status(400).json({ error: err.message });
   }
 };
 const AddUser = async (req, res) => {
