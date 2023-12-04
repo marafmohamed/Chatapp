@@ -27,6 +27,8 @@ export default function MessagingRooms() {
   const [realChat, setChat] = useState(null);
   const navigate = useNavigate();
   const [ChatName, setChatName] = useState("");
+  const [Typing, setTyping] = useState(false);
+  const [senderName,setSenderName]=useState('')
   const handleClick = () => {
     console.log("clicked");
   };
@@ -51,23 +53,10 @@ export default function MessagingRooms() {
         console.log(err);
       });
   };
-  // useEffect(()=>{
-  //   socket.on("received", (newMessageReceived) => {
-  //     console.log("this is the condition :   ",realChat );
-  //     if(!realChat || realChat._id !==newMessageReceived.chat._id){
-  //       console.log('this is room : ',realChat,'while this is the message room : ',newMessageReceived.chat._id);
-
-  //       setNotification([...notification,newMessageReceived]);
-  //         setisNewNotification(true);
-  //     }else{
-  //        setMessages([...messages, newMessageReceived]);
-  //     }
-  //   });
-  // });
-
   useEffect(() => {
     setLoading(true);
     setMessages([]);
+    setSenderName('');
     setChat(chats.find((chat) => chatId.id == chat._id));
     const getMessages = async () => {
       const obj = JSON.parse(localStorage.getItem("user"));
@@ -96,13 +85,22 @@ export default function MessagingRooms() {
       setLoading(false);
     };
   }, []);
+  const [realUser, setRealUser] = useState(null);
   useEffect(() => {
     if (realChat) {
-      if(realChat.isGroupChat){
+      if (realChat.isGroupChat) {
         setChatName(realChat.name);
-      }else{
+      } else {
         setChatName(realChat.users.find((u) => u.Email !== user.Email).Name);
-      }    }
+      }
+      if (realChat.isGroupChat) {
+        user.Email == realChat.GroupAdmin.Email
+          ? setRealUser(realChat.GroupAdmin)
+          : setRealUser(realChat.users.find((u) => u.Email === user.Email));
+      } else {
+        setRealUser(realChat.users.find((u) => u.Email === user.Email));
+      }
+    }
   }, [realChat]);
   useEffect(() => {
     if (scrolll.current !== null) {
@@ -111,10 +109,23 @@ export default function MessagingRooms() {
   }, [messages]);
   useEffect(() => {
     socket.on("received", (newMessageReceived) => {
+      setTyping(false);
       setMessages([...messages, newMessageReceived]);
     });
+    socket.on("UserTyping", (name) => {
+      setTyping(true);
+      setSenderName(name);
+      setTimeout(() => {
+        setTyping(false);
+        setSenderName('')
+      },  3000);
+    });
   });
-
+  useEffect(() => {
+    if (scrolll.current !== null && Typing) {
+      scrolll.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [Typing]);
   return (
     <>
       {realChat && (
@@ -177,29 +188,49 @@ export default function MessagingRooms() {
             <div className="bg-blue-400 hidden"></div>
             <div className="messages w-full">
               <div className="bg-gray-600 h-[92%]   max-h-[45rem] px-2 w-full flex flex-col  overflow-y-scroll ">
-               {loading && <div className="w-full h-full rounded-md flex justify-center items-center font-Parr text-lg bg-gray-600">getting messages</div>}
-               {!loading && messages.length===0 && <div className="w-full h-full rounded-md flex justify-center items-center font-Parr text-lg bg-gray-600">No messages</div>}
-               {!loading && <ul>
-                  {messages.length!==0 &&
-                    messages.map((message, index) => {
-                      const sender = message.sender.Email === user.Email;
-                      let sameSender = false;
-                      if (index !== 0) {
-                        sameSender =
-                          message.sender._id === messages[index - 1].sender._id;
-                      }
-                      return (
-                        <li key={index} ref={scrolll}>
-                          <Message
-                            message={message}
-                            sender={sender}
-                            sameSender={sameSender}
-                          />
-                        </li>
-                      );
-                    })}
-                </ul>}
+                {loading && (
+                  <div className="w-full h-full rounded-md flex justify-center items-center font-Parr text-lg bg-gray-600">
+                    getting messages
+                  </div>
+                )}
+                {!loading && messages.length === 0 && (
+                  <div className="w-full h-full rounded-md flex justify-center items-center font-Parr text-lg bg-gray-600">
+                    No messages
+                  </div>
+                )}
+                {!loading && (
+                  <ul className="h-full">
+                    {messages.length !== 0 &&
+                      messages.map((message, index) => {
+                        const sender = message.sender.Email === user.Email;
+                        let sameSender = false;
+                        if (index !== 0) {
+                          sameSender =
+                            message.sender._id ===
+                            messages[index - 1].sender._id;
+                        }
+                        return (
+                          <li key={index} ref={scrolll}>
+                            <Message
+                              message={message}
+                              sender={sender}
+                              sameSender={sameSender}
+                            />
+                          </li>
+                        );
+                      })}
+                    {Typing && (
+                      <div>
+                        {senderName !='' && <h1 className="chat-header font-Parr">{senderName}</h1>}
+                        <div className="h-6 rounded-2xl w-10  bottom-0 bg-gray-800/50 ml-12 flex justify-center items-center ">
+                          <span className="loading loading-dots loading-md"></span>
+                        </div>
+                      </div>
+                    )}
+                  </ul>
+                )}
               </div>
+
               <div className="bg-gray-700 shadow-lg flex h-[8%] w-full  items-center justify-center ">
                 <form
                   className="w-[90%] flex justify-around items-center relative gap-3"
@@ -214,6 +245,10 @@ export default function MessagingRooms() {
                     className="w-[95%] h-10 rounded-3xl mt-1 bg-gray-600 shadow-lg border text-lg  px-4 font-Parr  "
                     placeholder="Write message"
                     ref={messg}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      socket.emit("typing", realChat, realUser);
+                    }}
                   />
                   <button
                     type="submit"
