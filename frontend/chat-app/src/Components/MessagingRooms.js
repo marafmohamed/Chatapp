@@ -4,36 +4,62 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import Messeges from "./Messeges";
 import Message from "../SmallComponents/Message";
 import useMessage from "../hooks/useMessage";
-import Notification from "../SmallComponents/Notification";
-import io from "socket.io-client";
+import useSearchUsers from "../hooks/useSearchUsers";
 export default function MessagingRooms() {
   const chatId = useParams();
   const [loading, setLoading] = useState(false);
-  const {
-    chats,
-    user,
-    ENDPOINT,
-    socket,
-    setNotification,
-    notification,
-    setisNewNotification,
-    setMessages,
-    messages,
-  } = useAuth();
+  const { chats, user, ENDPOINT, socket, setMessages, messages } = useAuth();
 
-  const [received, setReceived] = useState(false);
   const scrolll = useRef(null);
   const messg = useRef(null);
   const [realChat, setChat] = useState(null);
   const navigate = useNavigate();
   const [ChatName, setChatName] = useState("");
   const [Typing, setTyping] = useState(false);
-  const [senderName,setSenderName]=useState('')
+  const [senderName, setSenderName] = useState("");
+  const [settings, setSettings] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState("");
+  const [users, setUsers] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const { SearchUsers } = useSearchUsers();
+  const [AddLoad, setAddLoad] = useState(false);
+  const SU = useRef(null);
   const handleClick = () => {
-    console.log("clicked");
+    setSettings(!settings);
   };
   const { sendMessage } = useMessage();
+  const handleAddMember = () => {
+    setShowAdd(true);
+  };
 
+  const handleAdd= async()=>{
+  
+    setAddLoad(true)
+    const obj = JSON.parse(localStorage.getItem("user"));
+    let token = null;
+    if (obj) {
+      token = obj.token;
+    }
+    console.log(realUser);
+    const results = await fetch(
+      `http://localhost:3000/api/chat/group/add`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body:JSON.stringify({userId:realUser._id,groupId:realChat._id})
+      }
+    );
+    results.json().then((res) => {
+      console.log(res);
+      setAddLoad(false);
+      setShowAdd(false);
+      setChat(res)
+    });
+  }
   const handleSendMessage = () => {
     if (messg.current.value === "" || !messg.current.value) {
       return console.log("message can't be empty");
@@ -56,7 +82,7 @@ export default function MessagingRooms() {
   useEffect(() => {
     setLoading(true);
     setMessages([]);
-    setSenderName('');
+    setSenderName("");
     setChat(chats.find((chat) => chatId.id == chat._id));
     const getMessages = async () => {
       const obj = JSON.parse(localStorage.getItem("user"));
@@ -117,8 +143,8 @@ export default function MessagingRooms() {
       setSenderName(name);
       setTimeout(() => {
         setTyping(false);
-        setSenderName('')
-      },  3000);
+        setSenderName("");
+      }, 3000);
     });
   });
   useEffect(() => {
@@ -185,9 +211,12 @@ export default function MessagingRooms() {
             </div>
           </div>
           <div className="flex w-full h-[91%] ">
-            <div className="bg-blue-400 hidden"></div>
             <div className="messages w-full">
-              <div className="bg-gray-600 h-[92%]   max-h-[45rem] px-2 w-full flex flex-col  overflow-y-scroll ">
+              <div
+                className={`bg-gray-600 h-[92%]   max-h-[45rem] px-2 w-full ${
+                  settings ? "hidden sm:flex sm:flex-col" : "flex flex-col "
+                } overflow-y-scroll `}
+              >
                 {loading && (
                   <div className="w-full h-full rounded-md flex justify-center items-center font-Parr text-lg bg-gray-600">
                     getting messages
@@ -221,7 +250,11 @@ export default function MessagingRooms() {
                       })}
                     {Typing && (
                       <div>
-                        {senderName !='' && <h1 className="chat-header font-Parr">{senderName}</h1>}
+                        {senderName != "" && (
+                          <h1 className="chat-header font-Parr">
+                            {senderName}
+                          </h1>
+                        )}
                         <div className="h-6 rounded-2xl w-10  bottom-0 bg-gray-800/50 ml-12 flex justify-center items-center ">
                           <span className="loading loading-dots loading-md"></span>
                         </div>
@@ -230,7 +263,132 @@ export default function MessagingRooms() {
                   </ul>
                 )}
               </div>
-
+              {settings && (
+                <div
+                  className={`bg-gray-600 h-[92%]   max-h-[45rem] px-2 w-full sm:w-[30%] transition-all ${
+                    !settings ? "hidden " : "flex flex-col "
+                  } `}
+                >
+                  <ul className="w-full h-full  flex flex-col items-center justify-center gap-1 ">
+                    {realChat.isGroupChat && (
+                      <li
+                        className="border-b  border-gray-800 py-3 w-[80%] cursor-pointer transition-all justify-center flex font-Parr border-opacity-80 hover:bg-gray-800"
+                        onClick={() => {
+                          handleAddMember();
+                        }}
+                      >
+                        Add member
+                      </li>
+                    )}
+                    {showAdd && (
+                      <div className="w-full h-[60%] flex flex-col justify-start items-center gap-3">
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                          }}
+                        >
+                          <input
+                            placeholder="Search Users"
+                            type="text"
+                            className="w-full h-12  rounded-3xl   text-white/80  font-Parr text-lg px-3  placeholder:text-white/30 mt-2 bg-gray-700 shadow-md shadow-gray-900"
+                            ref={SU}
+                            onChange={(e) => {
+                              if (SU.current.value !== "" && SU.current.value) {
+                                setSearching(true);
+                                SearchUsers(setUsers, SU.current.value);
+                              }
+                            }}
+                          />
+                        </form>
+                        <div className="flex flex-col gap-3 overflow-y-scroll">
+                          {users && searching && (
+                            <ul className="bg-gray-700 backdrop-blur-0  max-h-[400px] overflow-y-scroll rounded-xl mt-4 w-[95%]  lg:w-[300px] flex flex-col gap-2  items-center py-3 shadow-md z-20 ">
+                              {users.map((user, index) => {
+                                let exist = false;
+                                let c;
+                                chats.forEach((chat) => {
+                                  if (chat) {
+                                    chat.users.forEach((usr) => {
+                                      if (usr._id === user._id) {
+                                        exist = true;
+                                        c = chat;
+                                      }
+                                    });
+                                  }
+                                });
+                                return (
+                                  <li
+                                    key={index}
+                                    className="w-[96%] h-16 py-3  text-white/80  font-Parr text-lg px-3  mt-2 bg-gray-800  rounded-lg   shadow-inner shadow-gray-900/80 flex items-center justify-between"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className="avatar">
+                                        <div className="w-11 rounded-full ">
+                                          <img src="https://daisyui.com/images/stock/photo-1534528741775-53994a69daeb.jpg" />
+                                        </div>
+                                      </div>
+                                      <h1 className=" font-Parr text-xl text-gray-300">
+                                        {user.Name}
+                                      </h1>
+                                    </div>
+                                    {!exist && (
+                                      <div>
+                                        {!AddLoad && (
+                                          <button
+                                            className="btn btn-sm btn-outline"
+                                            onClick={(e) => {
+                                              handleAdd(user);
+                                            }}
+                                          >
+                                            <p>Add</p>
+                                          </button>
+                                        )}
+                                        {AddLoad && (
+                                          <button
+                                            className="btn btn-sm  bg-gray-500"
+                                            onClick={(e) => {
+                                              handleAdd(user);
+                                            }}
+                                          >
+                                            <p>Add</p>
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                    {exist && (
+                                      <button
+                                        className="btn btn-sm btn-outline"
+                                        onClick={() => {
+                                          navigate(`/${c._id}`);
+                                        }}
+                                      >
+                                        Chat
+                                      </button>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                              {users.length === 0 && searching && (
+                                <li className="h-14 flex justify-center items-center font-Parr text-xl ">
+                                  No results
+                                </li>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {realChat.isGroupChat && (
+                      <li className="border-b  border-gray-800 py-3 w-[80%] cursor-pointer transition-all justify-center flex font-Parr border-opacity-80 hover:bg-gray-800">
+                        Delete member
+                      </li>
+                    )}
+                    <li className="py-3 w-[80%] justify-center  border-gray-800 flex transition-all cursor-pointer font-Parr border-opacity-80 hover:bg-gray-800">
+                      rename Chat
+                    </li>
+                  </ul>
+                </div>
+              )}
               <div className="bg-gray-700 shadow-lg flex h-[8%] w-full  items-center justify-center ">
                 <form
                   className="w-[90%] flex justify-around items-center relative gap-3"

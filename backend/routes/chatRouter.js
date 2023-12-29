@@ -9,7 +9,6 @@ const {
   deleteUser,
 } = require("../controllers/chatControllers");
 const router = express.Router();
-
 //create new chat
 router.route("/").post(requireAuth, CreateChat);
 //fetching chats
